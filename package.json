@@ -1,0 +1,17 @@
+{
+  "name": "tiki-testing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node ./src/index.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "chromedriver": "^135.0.2",
+    "dotenv": "^16.5.0",
+    "selenium-webdriver": "^4.31.0"
+  }
+}

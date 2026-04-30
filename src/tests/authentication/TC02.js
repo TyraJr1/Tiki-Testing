@@ -1,3 +1,4 @@
+const { until } = require('selenium-webdriver');
 const WebDriverUtil = require('../../../utils/WebDriverUtil');
 const HomePage = require('../../../pages/Homepage');
 const LoginPage = require('../../../pages/LoginPage');
@@ -24,7 +25,7 @@ async function TC002() {
         console.log('Bước 2: Pop-up đăng nhập hiển thị.');
 
         // Bước 3: Nhấn nút "Đăng nhập bằng email"
-        await loginPage.clickLoginEmail(config.credentials.phoneNumber);
+        await loginPage.clickLoginEmail();
         console.log('Bước 3: Click vào "Đăng nhập bằng email" thành công.');
 
         // Bước 4: Nhập email
@@ -37,6 +38,8 @@ async function TC002() {
 
         // Bước 6: Nhấn nút "Đăng nhập"
         await loginPage.clickLoginButton();
+        // Chờ dialog đóng sau khi đăng nhập thành công
+        await driver.wait(until.urlContains('tiki.vn'), 15000).catch(() => {});
         const loginSuccess = await homePage.verifyLoginSuccess();
         if (loginSuccess) {
             console.log('Bước 6: Đăng nhập thành công, tên người dùng hiển thị.');

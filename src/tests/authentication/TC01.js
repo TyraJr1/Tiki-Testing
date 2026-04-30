@@ -1,50 +1,55 @@
+const { until } = require('selenium-webdriver');
 const WebDriverUtil = require('../../../utils/WebDriverUtil');
 const HomePage = require('../../../pages/Homepage');
 const LoginPage = require('../../../pages/LoginPage');
 const config = require('../../../config/config');
 
-
-// Kiểm tra người dùng có thể đăng nhập thành công vào hệ thống với số điện thoại Việt Nam
 async function TC001() {
     const webDriverUtil = new WebDriverUtil();
     let driver;
-
     try {
-        // Khởi tạo driver
         driver = await webDriverUtil.initDriver();
         const homePage = new HomePage(driver);
         const loginPage = new LoginPage(driver);
 
-        // Bước 1: Truy cập trang chủ Tiki
         await homePage.open();
         console.log('Bước 1: Trang chủ Tiki load thành công.');
 
-        // Bước 2: Nhấn biểu tượng "Tài khoản"
         await homePage.clickAccountIcon();
         console.log('Bước 2: Pop-up đăng nhập hiển thị.');
 
-        // Bước 3: Nhập số điện thoại
         await loginPage.enterPhoneNumber(config.credentials.phoneNumber);
-        console.log('Bước 3: Số điện thoại hợp lệ, chuyển đến form mật khẩu.');
+        console.log('Bước 3: Đã nhập số điện thoại.');
 
-        // Bước 4: Nhập mật khẩu
-        await loginPage.enterPassword(config.credentials.password);
-        console.log('Bước 4: Nhập mật khẩu thành công');
+        const loginStep = await loginPage.detectLoginStep();
+        if (loginStep === 'password') {
+            await loginPage.enterPassword(config.credentials.password);
+            await loginPage.clickLoginButton();
+            console.log('Bước 4-5: Nhập mật khẩu và đăng nhập.');
+        } else if (loginStep === 'otp') {
+            const otp = process.env.TIKI_OTP;
+            if (!otp) throw new Error('Hãy set biến môi trường TIKI_OTP để đăng nhập bằng OTP.');
+            await loginPage.enterOtp(otp);
+            console.log('Bước 4: Nhập OTP và xác minh thành công.');
+        } else {
+            throw new Error('Không chuyển sang bước mật khẩu/OTP sau khi nhập số điện thoại.');
+        }
 
-        // Bước 5: Nhấn nút "Đăng nhập"
-        await loginPage.clickLoginButton();
-        const loginSuccess = await homePage.verifyLoginSuccess();
-        if (loginSuccess) {
-            console.log('Bước 5: Đăng nhập thành công, tên người dùng hiển thị.');
+        console.log('Bước 6: Nếu thấy captcha, vui lòng xác minh trong trình duyệt (tối đa 120 giây).');
+        await loginPage.waitForCaptchaResolved();
+
+        await driver.wait(until.urlContains('tiki.vn'), 15000).catch(() => {});
+        if (await homePage.verifyLoginSuccess()) {
+            console.log('Bước 7: Đăng nhập thành công, tên người dùng hiển thị.');
         } else {
             throw new Error('Đăng nhập thất bại: Tên người dùng không hiển thị.');
         }
     } catch (error) {
         console.error('Lỗi trong TC001:', error);
+        process.exitCode = 1;
     } finally {
         await webDriverUtil.quit();
     }
 }
 
-// Chạy test
 TC001();

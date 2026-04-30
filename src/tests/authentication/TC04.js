@@ -5,7 +5,7 @@ const config = require('../../../config/config');
 
 
 // Đăng nhập thất bại với số điện thoại không tồn tại
-async function TC006() {
+async function TC004() {
     const webDriverUtil = new WebDriverUtil();
     let driver;
 
@@ -23,11 +23,10 @@ async function TC006() {
         await homePage.clickAccountIcon();
         console.log('Bước 2: Pop-up đăng nhập hiển thị.');
 
-        console.log(config.credentials.fakePhoneNumber);
-        // Bước 3: Nhấn số điện thoại không tồn tại
+        // Bước 3: Nhập số điện thoại sai định dạng
         await loginPage.enterFakePhoneNumber(config.credentials.fakePhoneNumber);
-        console.log('Bước 3: Nhập số điện thoại không tồn tại.');
-
+        console.log('Bước 3: Nhập số điện thoại sai định dạng.');
+        
         const hasError = await loginPage.checkPhoneNumberError();
         console.log('Bước 4: Kiểm tra lỗi số điện thoại không tồn tại.');
 
@@ -39,11 +38,11 @@ async function TC006() {
         }
         
     } catch (error) {
-        console.error('Lỗi trong TC006:', error);
+        console.error('Lỗi trong TC004:', error);
     } finally {
         await webDriverUtil.quit();
     }
 }
 
 // Chạy test
-TC006();
+TC004();

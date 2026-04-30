@@ -4,7 +4,7 @@ const LoginPage = require('../../../pages/LoginPage');
 const config = require('../../../config/config');
 
 // Đăng nhập thất bại với OTP sai quá số lần cho phép
-async function TC007() {
+async function TC005() {
     const webDriverUtil = new WebDriverUtil();
     let driver;
 
@@ -52,11 +52,11 @@ async function TC007() {
             console.log('Bước 8: Ô nhập mã OTP đã bị vô hiệu hóa.');
         }
     } catch (error) {
-        console.error('Lỗi trong TC007:', error);
+        console.error('Lỗi trong TC005:', error);
     } finally {
         await webDriverUtil.quit();
     }
 }
 
 // Chạy test
-TC007();
+TC005();

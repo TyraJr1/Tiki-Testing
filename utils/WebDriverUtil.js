@@ -9,10 +9,21 @@ class WebDriverUtil {
 
     // Khởi tạo WebDriver
     async initDriver() {
+        const options = new chrome.Options()
+            .addArguments('--window-size=1920,1080')
+            .addArguments('--disable-popup-blocking')
+            .addArguments('--disable-blink-features=AutomationControlled')
+            .excludeSwitches(['enable-automation'])
+            .setUserPreferences({ 'useAutomationExtension': false });
         this.driver = await new Builder()
             .forBrowser('chrome')
-            .setChromeOptions(new chrome.Options())
+            .setChromeOptions(options)
             .build();
+        try { await this.driver.manage().window().maximize(); } catch (_) {}
+        // Ẩn navigator.webdriver để tránh bị detect là automation
+        await this.driver.executeScript(
+            "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+        );
         return this.driver;
     }
 
@@ -36,6 +47,7 @@ class WebDriverUtil {
     // Nhập văn bản vào phần tử
     async sendKeys(locator, text) {
         const element = await this.waitForElement(locator);
+        await element.clear();
         await element.sendKeys(text);
     }
 

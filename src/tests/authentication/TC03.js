@@ -1,113 +1,78 @@
-const { until } = require('selenium-webdriver');
-const WebDriverUtil = require('../../../utils/WebDriverUtil');
-const HomePage = require('../../../pages/Homepage');
-const LoginPage = require('../../../pages/LoginPage');
-const config = require('../../../config/config');
+const fs = require("fs");
+const path = require("path");
+const assert = require("assert");
 
-async function TC003() {
-    const webDriverUtil = new WebDriverUtil();
-    let driver;
-    try {
-        driver = await webDriverUtil.initDriver();
-        const homePage = new HomePage(driver);
-        const loginPage = new LoginPage(driver);
+const WebDriverUtil = require("../../../utils/WebDriverUtil");
+const HomePage = require("../../../pages/Homepage");
+const LoginPage = require("../../../pages/LoginPage");
 
-        await homePage.open();
-        console.log('Bước 1: Trang chủ Tiki load thành công.');
+const SCREENSHOT_PATH = path.join(
+  process.cwd(),
+  "evidence",
+  "screenshots",
+  "TC03.png"
+);
 
-        await homePage.clickAccountIcon();
-        console.log('Bước 2: Pop-up đăng nhập hiển thị.');
+async function saveScreenshot(driver) {
+  fs.mkdirSync(path.dirname(SCREENSHOT_PATH), { recursive: true });
 
-        await loginPage.acceptTermsIfNeeded();
-        console.log('Bước 3: Đã đồng ý điều khoản.');
+  const image = await driver.takeScreenshot();
+  fs.writeFileSync(SCREENSHOT_PATH, image, "base64");
 
-        await loginPage.clickFacebookIcon();
-        console.log('Bước 4: Đã nhấn biểu tượng Facebook.');
-
-        // Lấy mainHandle trước khi Tiki mở popup Facebook
-        const mainHandle = (await driver.getAllWindowHandles())[0];
-        // Tiki fetch OAuth URL async (~10-15s) rồi mới mở popup
-        await webDriverUtil.sleep(15000);
-        const switched = await driver.wait(async () => {
-            const handles = await driver.getAllWindowHandles();
-            if (handles.length > 1) {
-                await driver.switchTo().window(handles.find(h => h !== mainHandle));
-                return true;
-            }
-            const url = await driver.getCurrentUrl().catch(() => '');
-            return url.includes('facebook.com');
-        }, 40000).catch(() => false);
-
-        if (!switched) {
-            console.log('⚠️  Popup Facebook không mở được — Tiki có thể đang chặn automation.');
-            return;
-        }
-        console.log('Bước 4: Chuyển đến trang đăng nhập Facebook.');
-
-        await webDriverUtil.waitForElement(loginPage.facebookEmailInput, 30000);
-        console.log('Bước 5: Trang Facebook load thành công.');
-
-        await loginPage.enterFacebookCredentials(config.credentials.facebookEmail, config.credentials.facebookPassword);
-        await loginPage.clickFacebookLoginButton();
-        console.log('Bước 6-7: Nhập thông tin và đăng nhập Facebook.');
-
-        await webDriverUtil.sleep(3000);
-        let popupUrl = '';
-        try { popupUrl = await driver.getCurrentUrl(); } catch (_) {}
-        if (/two_step_verification|checkpoint/.test(popupUrl))
-            console.log('⚠️  Facebook yêu cầu xác minh 2 bước (tối đa 120 giây)...');
-
-        try { await loginPage.confirmFacebookAccessIfNeeded(5000); } catch (_) {}
-        console.log('Bước 8: Xác nhận quyền truy cập.');
-
-        // Chờ popup đóng — bắt NoSuchWindowError vì popup có thể đóng đột ngột
-        try {
-            await driver.wait(async () => {
-                try { return (await driver.getAllWindowHandles()).length === 1; }
-                catch (_) { return true; }
-            }, 120000);
-        } catch (_) {}
-
-        // Switch về Tiki — nếu fail thì switch lại bằng handle đầu tiên còn lại
-        try {
-            await driver.switchTo().window(mainHandle);
-        } catch (_) {
-            const handles = await driver.getAllWindowHandles().catch(() => []);
-            if (handles.length > 0) await driver.switchTo().window(handles[0]).catch(() => {});
-        }
-
-        // Kiểm tra URL — nếu là checkpoint/robot thì dừng ở đây là OK
-        const finalUrl = await driver.getCurrentUrl().catch(() => '');
-        if (/checkpoint|robot|captcha|xác\s*minh/i.test(finalUrl)) {
-            console.log('⚠️  Bước 9: Dừng tại trang xác minh robot — kết quả chấp nhận được.');
-            return;
-        }
-
-        // Chờ Tiki xử lý OAuth callback và load lại trang chủ
-        await driver.wait(until.urlContains('tiki.vn'), 30000).catch(() => {});
-        await webDriverUtil.sleep(3000);
-
-        // Bước 9: Xác minh đăng nhập thành công
-        try {
-            const loginSuccess = await homePage.verifyLoginSuccess();
-            if (loginSuccess) {
-                console.log('Bước 9: Đăng nhập Facebook thành công — test case hoàn tất.');
-            } else {
-                console.error('Bước 9: Đăng nhập thất bại — không điều hướng đến trang tài khoản.');
-            }
-        } catch (error) {
-            const src = `${await driver.getCurrentUrl().catch(() => '')} ${await driver.getPageSource().catch(() => '')}`;
-            if (/captcha|robot|xác\s*minh/i.test(src) || error.name === 'NoSuchWindowError') {
-                console.log('⚠️  Bước 9: Dừng tại trang xác minh robot — kết quả chấp nhận được.');
-            } else {
-                console.error('Bước 9: Lỗi xác minh đăng nhập —', error.message);
-            }
-        }
-    } catch (error) {
-        console.error('Lỗi trong TC003:', error);
-    } finally {
-        await webDriverUtil.quit();
-    }
+  console.log(`Evidence: ${SCREENSHOT_PATH}`);
 }
 
+// Đăng nhập thất bại với số điện thoại sai định dạng
+async function TC003() {
+  const webDriverUtil = new WebDriverUtil();
+  let driver;
+
+  try {
+    // Khởi tạo driver
+    driver = await webDriverUtil.initDriver();
+    await driver.manage().window().maximize();
+
+    const homePage = new HomePage(driver);
+    const loginPage = new LoginPage(driver);
+
+    // Bước 1: Truy cập trang chủ Tiki
+    await homePage.open();
+    console.log("TC003 - Trang chủ Tiki load thành công.");
+
+    // Bước 2: Nhấn biểu tượng Tài khoản
+    await homePage.clickAccountIcon();
+    console.log("TC003 - Popup đăng nhập hiển thị.");
+
+    // Bước 3: Nhập số điện thoại sai định dạng
+    await loginPage.enterFakePhoneNumber("0123");
+    console.log("TC003 - Đã nhập số điện thoại sai định dạng.");
+
+    // Bước 4: Kiểm tra thông báo lỗi
+    const hasError = await loginPage.checkPhoneNumberError();
+
+    // Chụp 1 ảnh minh chứng
+    await saveScreenshot(driver);
+
+    assert(
+      hasError,
+      "TC003 FAIL: Không hiển thị lỗi khi nhập số điện thoại sai định dạng."
+    );
+
+    console.log("TC004 PASS: Hệ thống hiển thị lỗi số điện thoại sai định dạng.");
+  } catch (error) {
+    console.error("TC003 FAIL:", error.message);
+
+    if (driver) {
+      await saveScreenshot(driver);
+    }
+
+    process.exitCode = 1;
+  } finally {
+    if (driver) {
+      await webDriverUtil.quit();
+    }
+  }
+}
+
+// Chạy test
 TC003();

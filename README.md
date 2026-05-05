@@ -29,7 +29,7 @@ index.test.js: The main entry point that runs the tests in the feature-specific 
 
 3. Running Tests
 You can run the Selenium tests by executing the following command: npm test
-This will run the tests defined in index.test.js. The script will initialize a Chrome WebDriver session and run the defined browser actions.
+This will run the tests defined in index.test.js. The script will initialize a Chrome WebDriver session and run the defined browser actions
 
 
 ## Folder Descriptions
